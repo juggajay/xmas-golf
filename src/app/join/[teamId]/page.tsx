@@ -5,7 +5,7 @@ import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import { useGhostAuth } from "@/hooks/useGhostAuth";
 import { useRouter, useParams } from "next/navigation";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { generateAvatar } from "@/app/actions/generate-avatar";
 
 // Fun loading messages for avatar generation
@@ -22,7 +22,7 @@ export default function JoinTeam() {
   const params = useParams();
   const teamId = params.teamId as Id<"teams">;
   const router = useRouter();
-  const { register, isAuthenticated } = useGhostAuth();
+  const { register, isAuthenticated, isLoading: authLoading } = useGhostAuth();
 
   const team = useQuery(api.teams.getTeam, { teamId });
   const storeAvatar = useMutation(api.storage.storeAvatarFromUrl);
@@ -43,9 +43,27 @@ export default function JoinTeam() {
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // If already authenticated, redirect
+  // Redirect if already authenticated (must be in useEffect)
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      router.push("/play");
+    }
+  }, [authLoading, isAuthenticated, router]);
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4 animate-bounce">⛳</div>
+          <p className="text-xl text-white/80">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render form if authenticated (will redirect)
   if (isAuthenticated) {
-    router.push("/play");
     return null;
   }
 
