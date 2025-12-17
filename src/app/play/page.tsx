@@ -44,7 +44,7 @@ export default function PlayPage() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-20 bg-[#0a1f0a]/90 backdrop-blur-md border-b border-white/10 px-4 py-3">
+      <header className="sticky top-0 z-20 bg-[#0a1f0a]/90 backdrop-blur-md border-b border-white/10 px-4 py-3 safe-area-top">
         <div className="flex items-center justify-between max-w-4xl mx-auto">
           <div className="flex items-center gap-3">
             <div
@@ -133,11 +133,17 @@ export default function PlayPage() {
       )}
 
       {/* Floating Action Buttons */}
-      <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-30">
+      <div
+        className="fixed flex flex-col gap-3 z-30"
+        style={{
+          bottom: 'max(1.5rem, env(safe-area-inset-bottom, 1.5rem))',
+          right: 'max(1.5rem, env(safe-area-inset-right, 1.5rem))'
+        }}
+      >
         {/* Score Entry Button */}
         <button
           onClick={() => setShowScoreInput(true)}
-          className="w-14 h-14 rounded-full bg-[#d63384] text-white text-2xl shadow-lg hover:scale-110 transition-transform flex items-center justify-center"
+          className="w-14 h-14 rounded-full bg-[#d63384] text-white text-2xl shadow-lg active:scale-95 transition-transform flex items-center justify-center"
           title="Enter Score"
         >
           📝

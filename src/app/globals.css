@@ -32,10 +32,45 @@
 
 body {
   background: linear-gradient(180deg, #0a1f0a 0%, #0f5132 50%, #0a3622 100%);
-  background-attachment: fixed;
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
   min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Safe Area Utilities for notched phones */
+.safe-area-top {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+}
+
+.safe-area-bottom {
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+}
+
+.safe-area-left {
+  padding-left: max(1rem, env(safe-area-inset-left));
+}
+
+.safe-area-right {
+  padding-right: max(1rem, env(safe-area-inset-right));
+}
+
+.safe-area-x {
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+}
+
+.safe-area-y {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+}
+
+.safe-area-all {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
 }
 
 /* Snow Animation */
@@ -93,10 +128,37 @@ body {
 .snowflake:nth-child(19) { left: 90%; animation-duration: 11s; animation-delay: 1.6s; font-size: 0.5em; }
 .snowflake:nth-child(20) { left: 3%; animation-duration: 13s; animation-delay: 4.2s; font-size: 0.8em; }
 
+/* Reduce snowflakes on mobile for better performance */
+@media (max-width: 768px) {
+  .snowflake {
+    will-change: transform;
+  }
+  .snowflake:nth-child(n+11) {
+    display: none; /* Only show first 10 on mobile */
+  }
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  .snowflake {
+    animation: none;
+    display: none;
+  }
+}
+
 /* Bubbly Button Style */
 .btn-christmas {
   @apply px-6 py-3 rounded-xl font-bold text-white transition-all duration-200;
-  @apply hover:scale-105 hover:shadow-lg active:scale-95;
+  @apply active:scale-95;
+  min-height: 48px; /* Touch-friendly minimum */
+}
+
+/* Only apply hover effects on devices that support hover */
+@media (hover: hover) {
+  .btn-christmas:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  }
 }
 
 .btn-red {

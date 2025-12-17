@@ -321,23 +321,24 @@ export default function JoinTeam() {
           </div>
 
           {/* Bottom Controls */}
-          <div className="bg-black/90 p-6 pb-8 safe-area-bottom">
-            <div className="flex items-center justify-center gap-6 max-w-md mx-auto">
+          <div className="bg-black/90 p-6 safe-area-bottom">
+            <div className="flex items-center justify-center gap-4 sm:gap-6 max-w-md mx-auto px-4">
               <button
                 type="button"
                 onClick={stopCamera}
-                className="w-14 h-14 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white text-xl transition-all"
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/20 active:bg-white/40 flex items-center justify-center text-white text-xl transition-all"
               >
                 ✕
               </button>
               <button
                 type="button"
                 onClick={capturePhoto}
-                className="w-20 h-20 rounded-full bg-white hover:bg-white/90 flex items-center justify-center transition-all shadow-lg shadow-white/20"
+                className="w-18 h-18 sm:w-20 sm:h-20 rounded-full bg-white active:bg-white/80 flex items-center justify-center transition-all shadow-lg shadow-white/20"
+                style={{ width: '72px', height: '72px' }}
               >
-                <div className="w-16 h-16 rounded-full border-4 border-black/20" />
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-4 border-black/20" />
               </button>
-              <div className="w-14 h-14" /> {/* Spacer for balance */}
+              <div className="w-12 h-12 sm:w-14 sm:h-14" /> {/* Spacer for balance */}
             </div>
           </div>
         </div>
@@ -381,10 +382,13 @@ export default function JoinTeam() {
               </label>
               <input
                 type="text"
+                inputMode="text"
+                autoComplete="name"
+                autoCapitalize="words"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter your name"
-                className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#d63384]"
+                className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#d63384] text-base"
                 disabled={isSubmitting}
               />
             </div>
@@ -394,17 +398,17 @@ export default function JoinTeam() {
               <label className="block text-white/80 text-sm mb-2">
                 Golf Handicap
               </label>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 sm:gap-4">
                 <input
                   type="range"
                   min="0"
                   max="36"
                   value={handicap}
                   onChange={(e) => setHandicap(Number(e.target.value))}
-                  className="flex-1 accent-[#d63384]"
+                  className="flex-1 accent-[#d63384] h-8 sm:h-6"
                   disabled={isSubmitting}
                 />
-                <span className="text-2xl font-bold text-white w-12 text-center">
+                <span className="text-2xl sm:text-3xl font-bold text-white w-14 text-center flex-shrink-0">
                   {handicap}
                 </span>
               </div>
