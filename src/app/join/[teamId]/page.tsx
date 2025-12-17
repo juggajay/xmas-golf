@@ -18,6 +18,65 @@ const LOADING_MESSAGES = [
   "Warming up the reindeer caddies...",
 ];
 
+// Compress image to max 800x800 and JPEG quality 0.7
+// Mobile camera photos can be 10MB+, this brings them to ~100KB
+async function compressImage(file: File | Blob): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const maxSize = 800;
+      let width = img.width;
+      let height = img.height;
+
+      // Scale down to max 800x800 while maintaining aspect ratio
+      if (width > height) {
+        if (width > maxSize) {
+          height = Math.round((height * maxSize) / width);
+          width = maxSize;
+        }
+      } else {
+        if (height > maxSize) {
+          width = Math.round((width * maxSize) / height);
+          height = maxSize;
+        }
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+
+      if (!ctx) {
+        reject(new Error("Could not get canvas context"));
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            console.log(`Compressed image: ${file.size} -> ${blob.size} bytes`);
+            resolve(blob);
+          } else {
+            reject(new Error("Failed to compress image"));
+          }
+        },
+        "image/jpeg",
+        0.7
+      );
+    };
+    img.onerror = () => reject(new Error("Failed to load image"));
+
+    // Load the image from the file
+    if (file instanceof File) {
+      img.src = URL.createObjectURL(file);
+    } else {
+      img.src = URL.createObjectURL(file);
+    }
+  });
+}
+
 export default function JoinTeam() {
   const params = useParams();
   const teamId = params.teamId as Id<"teams">;
@@ -38,6 +97,7 @@ export default function JoinTeam() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarFeatures, setAvatarFeatures] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -109,26 +169,42 @@ export default function JoinTeam() {
     setIsCapturing(false);
   }, []);
 
+  // Show toast message temporarily
+  const showToast = useCallback((message: string) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 5000);
+  }, []);
+
   const processImageForAvatar = useCallback(
     async (imageDataUrl: string, file?: File) => {
       setIsGeneratingAvatar(true);
       const cleanup = startLoadingMessages();
 
       try {
-        // Create FormData for the server action
-        const formData = new FormData();
-
-        if (file) {
-          formData.append("selfie", file);
-        } else {
-          // Convert data URL to blob
-          const response = await fetch(imageDataUrl);
-          const blob = await response.blob();
-          formData.append("selfie", blob, "selfie.jpg");
+        // Step 1: Compress the image to reduce payload size
+        let compressedBlob: Blob;
+        try {
+          if (file) {
+            compressedBlob = await compressImage(file);
+          } else {
+            const response = await fetch(imageDataUrl);
+            const blob = await response.blob();
+            compressedBlob = await compressImage(blob);
+          }
+        } catch (compressionError) {
+          console.error("Compression failed:", compressionError);
+          showToast("Photo too large. Try a smaller photo.");
+          const fallbackUrl = `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(name || "player")}&backgroundColor=c41e3a,228b22&backgroundType=gradientLinear`;
+          setAvatarUrl(fallbackUrl);
+          return;
         }
+
+        // Step 2: Create FormData with compressed image
+        const formData = new FormData();
+        formData.append("selfie", compressedBlob, "selfie.jpg");
         formData.append("userName", name);
 
-        // Call the server action
+        // Step 3: Call the server action with timeout handling
         const result = await generateAvatar(formData);
 
         if (result.success && result.avatarUrl) {
@@ -136,13 +212,15 @@ export default function JoinTeam() {
           setAvatarFeatures(result.features || null);
         } else {
           console.error("Avatar generation failed:", result.error);
-          // Show error and use fallback
-          setAvatarFeatures(`API Error: ${result.error}`);
+          showToast(result.error || "AI busy. Try again or use a different photo.");
+          // Use fallback avatar
           const fallbackUrl = `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(name || "player")}&backgroundColor=c41e3a,228b22&backgroundType=gradientLinear`;
           setAvatarUrl(fallbackUrl);
+          setAvatarFeatures(result.features || null);
         }
       } catch (err) {
         console.error("Avatar generation failed:", err);
+        showToast("Photo too large or AI busy. Try a smaller photo.");
         // Generate a fallback avatar
         const fallbackUrl = `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(name || "player")}&backgroundColor=c41e3a,228b22&backgroundType=gradientLinear`;
         setAvatarUrl(fallbackUrl);
@@ -151,7 +229,7 @@ export default function JoinTeam() {
         setIsGeneratingAvatar(false);
       }
     },
-    [name, startLoadingMessages]
+    [name, startLoadingMessages, showToast]
   );
 
   const capturePhoto = useCallback(async () => {
@@ -298,6 +376,15 @@ export default function JoinTeam() {
 
   return (
     <>
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed top-4 left-4 right-4 z-50 flex justify-center pointer-events-none">
+          <div className="bg-red-500/90 backdrop-blur-sm text-white px-4 py-3 rounded-xl shadow-lg max-w-sm text-center text-sm font-medium pointer-events-auto">
+            {toast}
+          </div>
+        </div>
+      )}
+
       {/* Fullscreen Camera Overlay */}
       {isCapturing && (
         <div className="fixed inset-0 z-50 bg-black flex flex-col">

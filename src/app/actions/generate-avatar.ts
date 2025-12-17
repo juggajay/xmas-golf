@@ -1,5 +1,10 @@
 "use server";
 
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+// Set max duration for Vercel serverless function
+export const maxDuration = 60;
+
 export interface AvatarGenerationResult {
   success: boolean;
   avatarUrl?: string;
@@ -7,6 +12,9 @@ export interface AvatarGenerationResult {
   features?: string;
   error?: string;
 }
+
+// Use the standard AI Key
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
 
 export async function generateAvatar(
   formData: FormData
@@ -25,97 +33,120 @@ export async function generateAvatar(
   try {
     const arrayBuffer = await selfieFile.arrayBuffer();
     const base64Image = Buffer.from(arrayBuffer).toString("base64");
-    const mimeType = selfieFile.type || "image/jpeg";
 
-    // Use Gemini 2.0 Flash to generate cartoon avatar from photo
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: `Transform this photo into a fun 3D Pixar-style cartoon avatar.
+    // 1. VISION: Ask Gemini 1.5 Pro to describe the user's face
+    // (This ensures the cartoon actually looks like them)
+    const visionModel = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const descriptionResult = await visionModel.generateContent([
+      `Look at this selfie. Describe the person's key physical features for a character artist.
+       Focus on: Hair style/color, facial hair, glasses, eye color, skin tone, and distinct expression.
+       Output just the description, no intro text.`,
+      { inlineData: { data: base64Image, mimeType: "image/jpeg" } },
+    ]);
+    const description = descriptionResult.response.text();
 
-IMPORTANT: The cartoon MUST look like the same person - keep their:
-- Face shape and structure
-- Hair color and style
-- Skin tone
-- Glasses (if they have them)
-- Facial hair (if they have it)
+    console.log("Vision description:", description);
 
-Add these festive elements:
-- Wearing a Christmas golf polo (green with red trim)
-- Santa hat on their head
-- Holding a golden golf club
-- Confident, friendly smile
-- Sunny golf course background with Christmas lights
+    // 2. GENERATION: Try Imagen 3 first, fallback to Gemini 2.0 Flash
+    let avatarImageBase64: string | null = null;
+    let avatarMimeType = "image/png";
 
-Style: High quality 3D Pixar animation, cute but recognizable as the person, head and shoulders portrait.`,
-                },
-                {
-                  inlineData: {
-                    mimeType,
-                    data: base64Image,
-                  },
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            responseModalities: ["IMAGE", "TEXT"],
-          },
-        }),
+    try {
+      // Try Imagen 3 for high-quality generation
+      const imageModel = genAI.getGenerativeModel({
+        model: "imagen-3.0-generate-001",
+      });
+      const prompt = `Create a 3D Pixar-style cartoon avatar based on this description: ${description}
+
+The character is wearing a festive red and green Christmas golf outfit and a Santa hat.
+They are holding a golf club over their shoulder.
+Background: A sunny, vibrant golf course with Christmas decorations.
+Style: Cute, expressive, 3D render, 4k, high quality, digital art, Pixar animation style.`;
+
+      const imageResult = await imageModel.generateContent(prompt);
+      const response = imageResult.response;
+
+      // Handle Imagen response format
+      const parts = response.candidates?.[0]?.content?.parts || [];
+      for (const part of parts as Array<{ inlineData?: { data: string; mimeType: string } }>) {
+        if (part.inlineData?.data) {
+          avatarImageBase64 = part.inlineData.data;
+          avatarMimeType = part.inlineData.mimeType || "image/png";
+          break;
+        }
       }
-    );
+    } catch (imagenError) {
+      console.log("Imagen 3 not available, falling back to Gemini 2.0 Flash:", imagenError);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Gemini API error:", response.status, errorText);
+      // Fallback to Gemini 2.0 Flash experimental with image generation
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    text: `Create a 3D Pixar-style cartoon avatar of a person with these features: ${description}
+
+IMPORTANT styling:
+- Wearing a festive Christmas golf polo (green with red trim)
+- Santa hat on their head
+- Holding a golden golf club over their shoulder
+- Confident, friendly smile
+- Sunny golf course background with Christmas lights and decorations
+
+Style: High quality 3D Pixar animation, cute and expressive, head and shoulders portrait, 4k digital art.`,
+                  },
+                ],
+              },
+            ],
+            generationConfig: {
+              responseModalities: ["IMAGE", "TEXT"],
+            },
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        const parts = result.candidates?.[0]?.content?.parts || [];
+        for (const part of parts) {
+          if (part.inlineData?.data) {
+            avatarImageBase64 = part.inlineData.data;
+            avatarMimeType = part.inlineData.mimeType || "image/png";
+            break;
+          }
+        }
+      }
+    }
+
+    // 3. Return the Image
+    if (avatarImageBase64) {
       return {
-        success: false,
-        error: `API returned ${response.status}: ${errorText.substring(0, 200)}`,
+        success: true,
+        avatarUrl: `data:${avatarMimeType};base64,${avatarImageBase64}`,
+        avatarBase64: avatarImageBase64,
+        features: description.substring(0, 200),
       };
     }
 
-    const result = await response.json();
-
-    // Look for image in response
-    const parts = result.candidates?.[0]?.content?.parts || [];
-
-    for (const part of parts) {
-      if (part.inlineData?.data) {
-        const imageData = part.inlineData.data;
-        const imageMimeType = part.inlineData.mimeType || "image/png";
-
-        return {
-          success: true,
-          avatarUrl: `data:${imageMimeType};base64,${imageData}`,
-          avatarBase64: imageData,
-          features: "AI-generated cartoon avatar",
-        };
-      }
-    }
-
-    // No image found - check if there's text explaining why
-    const textPart = parts.find((p: { text?: string }) => p.text);
-    const errorMsg = textPart?.text || "No image generated";
-
-    console.error("No image in response:", JSON.stringify(result, null, 2));
+    // No image generated - return fallback
     return {
       success: false,
-      error: errorMsg.substring(0, 200),
+      error: "Could not generate avatar image. Try a different photo.",
+      features: description,
     };
   } catch (error) {
-    console.error("Avatar generation error:", error);
+    console.error("Avatar Gen Error:", error);
     return {
       success: false,
-      error: `Exception: ${error instanceof Error ? error.message : "Unknown error"}`,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to generate avatar. Please try a different photo.",
     };
   }
 }
