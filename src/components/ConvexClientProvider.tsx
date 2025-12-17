@@ -1,36 +1,44 @@
 "use client";
 
 import { ConvexProvider, ConvexReactClient } from "convex/react";
-import { ReactNode, useMemo, useState, useEffect } from "react";
+import { ReactNode, useRef, useState, useEffect } from "react";
 
-export function ConvexClientProvider({ children }: { children: ReactNode }) {
-  const [isClient, setIsClient] = useState(false);
+// Create client outside component to avoid re-creation, but only on client
+let globalClient: ConvexReactClient | null = null;
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+function getConvexClient(): ConvexReactClient | null {
+  if (typeof window === "undefined") return null;
 
-  const convex = useMemo(() => {
+  if (!globalClient) {
     const url = process.env.NEXT_PUBLIC_CONVEX_URL;
     if (!url) {
       console.error("NEXT_PUBLIC_CONVEX_URL is not set");
       return null;
     }
-    // Trim any whitespace from the URL
-    return new ConvexReactClient(url.trim());
+    globalClient = new ConvexReactClient(url.trim());
+  }
+  return globalClient;
+}
+
+export function ConvexClientProvider({ children }: { children: ReactNode }) {
+  const [client, setClient] = useState<ConvexReactClient | null>(null);
+
+  useEffect(() => {
+    // Only create client on mount (client-side only)
+    const convexClient = getConvexClient();
+    setClient(convexClient);
   }, []);
 
-  // Show loading state during SSR and initial client render
-  if (!isClient || !convex) {
+  if (!client) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="text-6xl mb-4 animate-bounce">⛳</div>
-          <p className="text-xl text-white/80">Connecting...</p>
+          <p className="text-xl text-white/80">Loading...</p>
         </div>
       </div>
     );
   }
 
-  return <ConvexProvider client={convex}>{children}</ConvexProvider>;
+  return <ConvexProvider client={client}>{children}</ConvexProvider>;
 }
