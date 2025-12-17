@@ -50,23 +50,6 @@ export default function JoinTeam() {
     }
   }, [authLoading, isAuthenticated, router]);
 
-  // Show loading while checking auth
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4 animate-bounce">⛳</div>
-          <p className="text-xl text-white/80">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Don't render form if authenticated (will redirect)
-  if (isAuthenticated) {
-    return null;
-  }
-
   // Cycle through loading messages
   const startLoadingMessages = useCallback(() => {
     let index = 0;
@@ -221,7 +204,7 @@ export default function JoinTeam() {
     }
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
       setError("Please enter your name");
@@ -253,7 +236,26 @@ export default function JoinTeam() {
       setError("Failed to join team. Please try again.");
       setIsSubmitting(false);
     }
-  };
+  }, [name, handicap, teamId, avatarUrl, register, storeAvatar, router]);
+
+  // ============ CONDITIONAL RETURNS AFTER ALL HOOKS ============
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4 animate-bounce">⛳</div>
+          <p className="text-xl text-white/80">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render form if authenticated (will redirect)
+  if (isAuthenticated) {
+    return null;
+  }
 
   if (team === undefined) {
     return (
@@ -349,230 +351,230 @@ export default function JoinTeam() {
           ← Back to teams
         </button>
 
-      <div className="max-w-md mx-auto">
-        {/* Team Header */}
-        <div className="card-christmas p-6 mb-6">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-6 h-6 rounded-full"
-              style={{ backgroundColor: team.color }}
-            />
-            <div>
-              <h1 className="font-[var(--font-fredoka)] text-2xl font-bold text-white">
-                Join {team.name}
-              </h1>
-              <p className="text-white/60 text-sm">
-                {team.members.length} player
-                {team.members.length !== 1 ? "s" : ""} on this team
-              </p>
+        <div className="max-w-md mx-auto">
+          {/* Team Header */}
+          <div className="card-christmas p-6 mb-6">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-6 h-6 rounded-full"
+                style={{ backgroundColor: team.color }}
+              />
+              <div>
+                <h1 className="font-[var(--font-fredoka)] text-2xl font-bold text-white">
+                  Join {team.name}
+                </h1>
+                <p className="text-white/60 text-sm">
+                  {team.members.length} player
+                  {team.members.length !== 1 ? "s" : ""} on this team
+                </p>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Registration Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Name Input */}
-          <div className="card-christmas p-6">
-            <label className="block text-white/80 text-sm mb-2">
-              Your Name
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter your name"
-              className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#d63384]"
-              disabled={isSubmitting}
-            />
-          </div>
-
-          {/* Handicap Input */}
-          <div className="card-christmas p-6">
-            <label className="block text-white/80 text-sm mb-2">
-              Golf Handicap
-            </label>
-            <div className="flex items-center gap-4">
+          {/* Registration Form */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Name Input */}
+            <div className="card-christmas p-6">
+              <label className="block text-white/80 text-sm mb-2">
+                Your Name
+              </label>
               <input
-                type="range"
-                min="0"
-                max="36"
-                value={handicap}
-                onChange={(e) => setHandicap(Number(e.target.value))}
-                className="flex-1 accent-[#d63384]"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter your name"
+                className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#d63384]"
                 disabled={isSubmitting}
               />
-              <span className="text-2xl font-bold text-white w-12 text-center">
-                {handicap}
-              </span>
             </div>
-            <p className="text-white/40 text-xs mt-2">
-              {handicap === 0
-                ? "Scratch golfer! 🏆"
-                : handicap <= 10
-                ? "Nice! You're pretty good! 👏"
-                : handicap <= 20
-                ? "Average golfer 🏌️"
-                : "We all start somewhere! 😊"}
-            </p>
-          </div>
 
-          {/* Selfie Capture */}
-          <div className="card-christmas p-6">
-            <label className="block text-white/80 text-sm mb-2">
-              Create Your Avatar
-            </label>
-            <p className="text-white/40 text-xs mb-4">
-              Take a selfie or upload a photo - our AI will create a festive
-              golf avatar!
-            </p>
-
-            {/* Hidden file input */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              capture="user"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-
-            {!selfieData && !isCapturing && (
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={startCamera}
-                  className="flex-1 btn-christmas btn-green flex items-center justify-center gap-2"
+            {/* Handicap Input */}
+            <div className="card-christmas p-6">
+              <label className="block text-white/80 text-sm mb-2">
+                Golf Handicap
+              </label>
+              <div className="flex items-center gap-4">
+                <input
+                  type="range"
+                  min="0"
+                  max="36"
+                  value={handicap}
+                  onChange={(e) => setHandicap(Number(e.target.value))}
+                  className="flex-1 accent-[#d63384]"
                   disabled={isSubmitting}
-                >
-                  📸 Camera
-                </button>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex-1 btn-christmas btn-green flex items-center justify-center gap-2"
-                  disabled={isSubmitting}
-                >
-                  📁 Upload
-                </button>
+                />
+                <span className="text-2xl font-bold text-white w-12 text-center">
+                  {handicap}
+                </span>
               </div>
-            )}
+              <p className="text-white/40 text-xs mt-2">
+                {handicap === 0
+                  ? "Scratch golfer! 🏆"
+                  : handicap <= 10
+                  ? "Nice! You're pretty good! 👏"
+                  : handicap <= 20
+                  ? "Average golfer 🏌️"
+                  : "We all start somewhere! 😊"}
+              </p>
+            </div>
 
-            {isCapturing && (
-              <div className="text-center text-white/60">
-                <p>Camera is open - see fullscreen view</p>
-              </div>
-            )}
+            {/* Selfie Capture */}
+            <div className="card-christmas p-6">
+              <label className="block text-white/80 text-sm mb-2">
+                Create Your Avatar
+              </label>
+              <p className="text-white/40 text-xs mb-4">
+                Take a selfie or upload a photo - our AI will create a festive
+                golf avatar!
+              </p>
 
-            {selfieData && (
-              <div className="space-y-4">
-                {/* Avatar Generation Loading State */}
-                {isGeneratingAvatar && (
-                  <div className="p-6 bg-gradient-to-br from-[#d63384]/20 to-[#0f5132]/20 rounded-xl border border-[#ffd700]/30 text-center">
-                    <div className="text-5xl mb-3 animate-bounce">🎅</div>
-                    <p className="text-[#ffd700] font-semibold text-lg mb-1">
-                      {loadingMessage}
-                    </p>
-                    <p className="text-white/60 text-sm">
-                      Creating your festive avatar...
-                    </p>
-                    <div className="mt-4 flex justify-center gap-1">
-                      {[...Array(3)].map((_, i) => (
-                        <div
-                          key={i}
-                          className="w-2 h-2 bg-[#ffd700] rounded-full animate-bounce"
-                          style={{ animationDelay: `${i * 0.2}s` }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                capture="user"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
 
-                {/* Photo and Avatar Display */}
-                {!isGeneratingAvatar && (
-                  <>
-                    <div className="flex gap-4">
-                      {/* Original selfie */}
-                      <div className="flex-1">
-                        <p className="text-white/40 text-xs mb-1 text-center">
-                          Your Photo
-                        </p>
-                        <div className="relative rounded-xl overflow-hidden aspect-square border-2 border-white/20">
-                          <img
-                            src={selfieData}
-                            alt="Your selfie"
-                            className="w-full h-full object-cover"
+              {!selfieData && !isCapturing && (
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={startCamera}
+                    className="flex-1 btn-christmas btn-green flex items-center justify-center gap-2"
+                    disabled={isSubmitting}
+                  >
+                    📸 Camera
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1 btn-christmas btn-green flex items-center justify-center gap-2"
+                    disabled={isSubmitting}
+                  >
+                    📁 Upload
+                  </button>
+                </div>
+              )}
+
+              {isCapturing && (
+                <div className="text-center text-white/60">
+                  <p>Camera is open - see fullscreen view</p>
+                </div>
+              )}
+
+              {selfieData && (
+                <div className="space-y-4">
+                  {/* Avatar Generation Loading State */}
+                  {isGeneratingAvatar && (
+                    <div className="p-6 bg-gradient-to-br from-[#d63384]/20 to-[#0f5132]/20 rounded-xl border border-[#ffd700]/30 text-center">
+                      <div className="text-5xl mb-3 animate-bounce">🎅</div>
+                      <p className="text-[#ffd700] font-semibold text-lg mb-1">
+                        {loadingMessage}
+                      </p>
+                      <p className="text-white/60 text-sm">
+                        Creating your festive avatar...
+                      </p>
+                      <div className="mt-4 flex justify-center gap-1">
+                        {[...Array(3)].map((_, i) => (
+                          <div
+                            key={i}
+                            className="w-2 h-2 bg-[#ffd700] rounded-full animate-bounce"
+                            style={{ animationDelay: `${i * 0.2}s` }}
                           />
-                        </div>
+                        ))}
                       </div>
+                    </div>
+                  )}
 
-                      {/* Generated avatar */}
-                      <div className="flex-1">
-                        <p className="text-white/40 text-xs mb-1 text-center">
-                          Your Avatar
-                        </p>
-                        <div className="relative rounded-xl overflow-hidden aspect-square bg-gradient-to-br from-[#c41e3a] to-[#228b22] border-2 border-[#ffd700] shadow-[0_0_15px_rgba(255,215,0,0.3)]">
-                          {avatarUrl ? (
+                  {/* Photo and Avatar Display */}
+                  {!isGeneratingAvatar && (
+                    <>
+                      <div className="flex gap-4">
+                        {/* Original selfie */}
+                        <div className="flex-1">
+                          <p className="text-white/40 text-xs mb-1 text-center">
+                            Your Photo
+                          </p>
+                          <div className="relative rounded-xl overflow-hidden aspect-square border-2 border-white/20">
                             <img
-                              src={avatarUrl}
-                              alt="Your avatar"
+                              src={selfieData}
+                              alt="Your selfie"
                               className="w-full h-full object-cover"
                             />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-4xl">
-                              🎅
-                            </div>
-                          )}
+                          </div>
+                        </div>
+
+                        {/* Generated avatar */}
+                        <div className="flex-1">
+                          <p className="text-white/40 text-xs mb-1 text-center">
+                            Your Avatar
+                          </p>
+                          <div className="relative rounded-xl overflow-hidden aspect-square bg-gradient-to-br from-[#c41e3a] to-[#228b22] border-2 border-[#ffd700] shadow-[0_0_15px_rgba(255,215,0,0.3)]">
+                            {avatarUrl ? (
+                              <img
+                                src={avatarUrl}
+                                alt="Your avatar"
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-4xl">
+                                🎅
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* AI analysis */}
-                    {avatarFeatures && (
-                      <div className="p-3 bg-white/5 rounded-lg border border-white/10">
-                        <p className="text-[#ffd700] text-xs mb-1 font-semibold">
-                          ✨ AI Analysis:
-                        </p>
-                        <p className="text-white/80 text-sm">{avatarFeatures}</p>
-                      </div>
-                    )}
+                      {/* AI analysis */}
+                      {avatarFeatures && (
+                        <div className="p-3 bg-white/5 rounded-lg border border-white/10">
+                          <p className="text-[#ffd700] text-xs mb-1 font-semibold">
+                            ✨ AI Analysis:
+                          </p>
+                          <p className="text-white/80 text-sm">{avatarFeatures}</p>
+                        </div>
+                      )}
 
-                    <button
-                      type="button"
-                      onClick={retakePhoto}
-                      className="w-full btn-christmas bg-white/20 hover:bg-white/30"
-                      disabled={isSubmitting}
-                    >
-                      🔄 Retake Photo
-                    </button>
-                  </>
-                )}
+                      <button
+                        type="button"
+                        onClick={retakePhoto}
+                        className="w-full btn-christmas bg-white/20 hover:bg-white/30"
+                        disabled={isSubmitting}
+                      >
+                        🔄 Retake Photo
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="card-christmas p-4 bg-red-500/20 border-red-500/40">
+                <p className="text-red-300 text-sm">{error}</p>
               </div>
             )}
-          </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="card-christmas p-4 bg-red-500/20 border-red-500/40">
-              <p className="text-red-300 text-sm">{error}</p>
-            </div>
-          )}
-
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={isSubmitting || isGeneratingAvatar || !name.trim()}
-            className="w-full btn-christmas btn-red text-xl py-4 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="animate-spin">⛳</span> Joining the party...
-              </span>
-            ) : (
-              "🎄 Join the Game!"
-            )}
-          </button>
-        </form>
-      </div>
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={isSubmitting || isGeneratingAvatar || !name.trim()}
+              className="w-full btn-christmas btn-red text-xl py-4 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="animate-spin">⛳</span> Joining the party...
+                </span>
+              ) : (
+                "🎄 Join the Game!"
+              )}
+            </button>
+          </form>
+        </div>
       </div>
     </>
   );
