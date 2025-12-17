@@ -86,12 +86,11 @@ Make it look fun and festive for a Christmas golf party!`;
       // Check for image in the response
       if (response.candidates && response.candidates[0]?.content?.parts) {
         for (const part of response.candidates[0].content.parts) {
-          // @ts-expect-error - inlineData exists on image parts
-          if (part.inlineData) {
-            // @ts-expect-error - accessing inlineData properties
-            const imageData = part.inlineData.data;
-            // @ts-expect-error - accessing inlineData properties
-            const mimeType = part.inlineData.mimeType || "image/png";
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const partAny = part as any;
+          if (partAny.inlineData) {
+            const imageData = partAny.inlineData.data;
+            const mimeType = partAny.inlineData.mimeType || "image/png";
 
             // Return as data URL
             const dataUrl = `data:${mimeType};base64,${imageData}`;

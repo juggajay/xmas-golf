@@ -79,8 +79,14 @@ export default function JoinTeam() {
 
   const startCamera = useCallback(async () => {
     try {
+      // Try to get front-facing camera with ideal settings for selfies
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: 640, height: 480 },
+        video: {
+          facingMode: { ideal: "user" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
       });
       streamRef.current = stream;
       if (videoRef.current) {
@@ -88,7 +94,20 @@ export default function JoinTeam() {
       }
       setIsCapturing(true);
     } catch (err) {
-      setError("Could not access camera. Please allow camera permissions.");
+      // Fallback: try any available camera
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+        setIsCapturing(true);
+      } catch {
+        setError("Could not access camera. Please allow camera permissions.");
+      }
     }
   }, []);
 
@@ -268,14 +287,67 @@ export default function JoinTeam() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-8">
-      {/* Back Button */}
-      <button
-        onClick={() => router.push("/")}
-        className="text-white/60 hover:text-white mb-6 flex items-center gap-2"
-      >
-        ← Back to teams
-      </button>
+    <>
+      {/* Fullscreen Camera Overlay */}
+      {isCapturing && (
+        <div className="fixed inset-0 z-50 bg-black flex flex-col">
+          {/* Camera View */}
+          <div className="flex-1 relative">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
+            />
+
+            {/* Overlay guide */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-64 h-64 sm:w-80 sm:h-80 border-4 border-white/30 rounded-full" />
+            </div>
+
+            {/* Top bar */}
+            <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/60 to-transparent">
+              <p className="text-white text-center font-semibold text-lg">
+                📸 Take Your Selfie
+              </p>
+              <p className="text-white/70 text-center text-sm mt-1">
+                Position your face in the circle
+              </p>
+            </div>
+          </div>
+
+          {/* Bottom Controls */}
+          <div className="bg-black/90 p-6 pb-8 safe-area-bottom">
+            <div className="flex items-center justify-center gap-6 max-w-md mx-auto">
+              <button
+                type="button"
+                onClick={stopCamera}
+                className="w-14 h-14 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white text-xl transition-all"
+              >
+                ✕
+              </button>
+              <button
+                type="button"
+                onClick={capturePhoto}
+                className="w-20 h-20 rounded-full bg-white hover:bg-white/90 flex items-center justify-center transition-all shadow-lg shadow-white/20"
+              >
+                <div className="w-16 h-16 rounded-full border-4 border-black/20" />
+              </button>
+              <div className="w-14 h-14" /> {/* Spacer for balance */}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="min-h-screen px-4 py-8">
+        {/* Back Button */}
+        <button
+          onClick={() => router.push("/")}
+          className="text-white/60 hover:text-white mb-6 flex items-center gap-2"
+        >
+          ← Back to teams
+        </button>
 
       <div className="max-w-md mx-auto">
         {/* Team Header */}
@@ -386,32 +458,8 @@ export default function JoinTeam() {
             )}
 
             {isCapturing && (
-              <div className="space-y-4">
-                <div className="relative rounded-xl overflow-hidden bg-black aspect-video">
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-full object-cover scale-x-[-1]"
-                  />
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={stopCamera}
-                    className="flex-1 btn-christmas bg-white/20 hover:bg-white/30"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={capturePhoto}
-                    className="flex-1 btn-christmas btn-red"
-                  >
-                    📷 Capture
-                  </button>
-                </div>
+              <div className="text-center text-white/60">
+                <p>Camera is open - see fullscreen view</p>
               </div>
             )}
 
@@ -525,6 +573,7 @@ export default function JoinTeam() {
           </button>
         </form>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
