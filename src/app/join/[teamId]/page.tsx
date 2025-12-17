@@ -429,12 +429,11 @@ export default function JoinTeam() {
                 golf avatar!
               </p>
 
-              {/* Hidden file input */}
+              {/* Hidden file input for gallery upload (no capture) */}
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
-                capture="user"
                 onChange={handleFileUpload}
                 className="hidden"
               />
