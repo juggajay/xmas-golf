@@ -107,16 +107,25 @@ export function useGhostAuth() {
   };
 }
 
-// Hook to get just the user ID from localStorage (for server components)
+// Hook to get just the user ID from localStorage (client-side only)
 export function getStoredUserId(): Id<"users"> | null {
   if (typeof window === "undefined") return null;
 
-  const stored = localStorage.getItem(STORAGE_KEY);
-  return stored as Id<"users"> | null;
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored as Id<"users"> | null;
+  } catch {
+    return null;
+  }
 }
 
-// Utility to clear session
+// Utility to clear session (client-side only)
 export function clearGhostSession() {
   if (typeof window === "undefined") return;
-  localStorage.removeItem(STORAGE_KEY);
+
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Ignore localStorage errors
+  }
 }

@@ -21,7 +21,8 @@ export default function PlayPage() {
     if (!isLoading && !isAuthenticated) {
       router.push("/");
     }
-  }, [isLoading, isAuthenticated, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, isAuthenticated]);
 
   const pendingScores = useQuery(
     api.scores.getPendingScores,

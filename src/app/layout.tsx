@@ -4,6 +4,7 @@ import { Fredoka } from "next/font/google";
 import "./globals.css";
 import { ConvexClientProvider } from "@/components/ConvexClientProvider";
 import { Snow } from "@/components/Snow";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -44,10 +45,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${fredoka.variable} antialiased`}
       >
-        <ConvexClientProvider>
-          <Snow />
-          <main className="relative z-10">{children}</main>
-        </ConvexClientProvider>
+        <ErrorBoundary>
+          <ConvexClientProvider>
+            <Snow />
+            <main className="relative z-10">{children}</main>
+          </ConvexClientProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

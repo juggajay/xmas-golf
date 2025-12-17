@@ -34,6 +34,7 @@ export function PowerUpFAB({ userId }: PowerUpFABProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedPowerup, setSelectedPowerup] = useState<Id<"powerups"> | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const powerups = useQuery(api.powerups.getUserPowerups, { userId });
   const teams = useQuery(api.teams.getAllTeams);
@@ -46,6 +47,7 @@ export function PowerUpFAB({ userId }: PowerUpFABProps) {
     if (!selectedPowerup) return;
 
     setIsProcessing(true);
+    setError(null);
     try {
       await usePowerup({
         powerupId: selectedPowerup,
@@ -54,7 +56,7 @@ export function PowerUpFAB({ userId }: PowerUpFABProps) {
       setSelectedPowerup(null);
       setIsOpen(false);
     } catch (err) {
-      alert("Failed to use power-up");
+      setError("Failed to use power-up. Try again.");
     } finally {
       setIsProcessing(false);
     }
@@ -175,6 +177,12 @@ export function PowerUpFAB({ userId }: PowerUpFABProps) {
                 {isProcessing && (
                   <p className="text-center text-white/60 animate-pulse">
                     Launching attack...
+                  </p>
+                )}
+
+                {error && (
+                  <p className="text-center text-red-400 text-sm">
+                    {error}
                   </p>
                 )}
               </div>

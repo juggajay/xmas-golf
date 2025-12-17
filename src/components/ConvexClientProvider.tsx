@@ -3,33 +3,23 @@
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 import { ReactNode, useRef, useState, useEffect } from "react";
 
-// Create client outside component to avoid re-creation, but only on client
-let globalClient: ConvexReactClient | null = null;
-
-function getConvexClient(): ConvexReactClient | null {
-  if (typeof window === "undefined") return null;
-
-  if (!globalClient) {
-    const url = process.env.NEXT_PUBLIC_CONVEX_URL;
-    if (!url) {
-      console.error("NEXT_PUBLIC_CONVEX_URL is not set");
-      return null;
-    }
-    globalClient = new ConvexReactClient(url.trim());
-  }
-  return globalClient;
-}
-
 export function ConvexClientProvider({ children }: { children: ReactNode }) {
-  const [client, setClient] = useState<ConvexReactClient | null>(null);
+  const clientRef = useRef<ConvexReactClient | null>(null);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // Only create client on mount (client-side only)
-    const convexClient = getConvexClient();
-    setClient(convexClient);
+    // Only runs on client after hydration
+    if (!clientRef.current) {
+      const url = process.env.NEXT_PUBLIC_CONVEX_URL;
+      if (url) {
+        clientRef.current = new ConvexReactClient(url.trim());
+      }
+    }
+    setIsReady(true);
   }, []);
 
-  if (!client) {
+  // Always render same structure for hydration matching
+  if (!isReady || !clientRef.current) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -40,5 +30,5 @@ export function ConvexClientProvider({ children }: { children: ReactNode }) {
     );
   }
 
-  return <ConvexProvider client={client}>{children}</ConvexProvider>;
+  return <ConvexProvider client={clientRef.current}>{children}</ConvexProvider>;
 }

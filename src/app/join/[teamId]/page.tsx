@@ -48,7 +48,8 @@ export default function JoinTeam() {
     if (!authLoading && isAuthenticated) {
       router.push("/play");
     }
-  }, [authLoading, isAuthenticated, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, isAuthenticated]);
 
   // Cycle through loading messages
   const startLoadingMessages = useCallback(() => {
