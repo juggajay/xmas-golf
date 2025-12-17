@@ -129,7 +129,8 @@ export default function JoinTeam() {
           setAvatarFeatures(result.features || null);
         } else {
           console.error("Avatar generation failed:", result.error);
-          // Generate a fallback avatar
+          // Show error and use fallback
+          setAvatarFeatures(`API Error: ${result.error}`);
           const fallbackUrl = `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(name || "player")}&backgroundColor=c41e3a,228b22&backgroundType=gradientLinear`;
           setAvatarUrl(fallbackUrl);
         }

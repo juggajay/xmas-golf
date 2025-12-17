@@ -27,56 +27,117 @@ export async function generateAvatar(
     const base64Image = Buffer.from(arrayBuffer).toString("base64");
     const mimeType = selfieFile.type || "image/jpeg";
 
-    // Imagen 3 via Google AI API
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`,
+    // Try Imagen 3 via Google AI API
+    const imagenResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:generateImages?key=${apiKey}`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          instances: [
+          prompt: `A 3D Pixar-style cartoon avatar portrait of this person. Maintain their facial features. Wearing a red and green Christmas golf polo and santa hat. Holding a golden golf club with a confident smile. Background: sunny golf course with Christmas decorations. Style: Pixar animation, cute, 8k quality.`,
+          referenceImages: [
             {
-              prompt: `A 3D Pixar-style rendering of this person. Maintain exact facial structure, eye shape, and nose. Outfit: Red and green Christmas golf polo, santa hat. Action: Holding a golden golf club, confident smile. Background: High-end golf course, sunny day. Style: 8k, cinematic lighting, cute but realistic likeness.`,
-              image: {
-                bytesBase64Encoded: base64Image,
+              referenceImage: {
+                imageBytes: base64Image,
               },
+              referenceId: 1,
+              referenceType: "STYLE_REFERENCE",
             },
           ],
-          parameters: {
-            sampleCount: 1,
+          config: {
+            numberOfImages: 1,
             aspectRatio: "1:1",
+            personGeneration: "ALLOW_ADULT",
           },
         }),
       }
     );
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Imagen API error:", errorText);
-      throw new Error(`API error: ${response.status}`);
+    console.log("Imagen response status:", imagenResponse.status);
+
+    if (imagenResponse.ok) {
+      const imagenResult = await imagenResponse.json();
+      console.log("Imagen result keys:", Object.keys(imagenResult));
+
+      if (imagenResult.generatedImages?.[0]?.image?.imageBytes) {
+        const imageData = imagenResult.generatedImages[0].image.imageBytes;
+        return {
+          success: true,
+          avatarUrl: `data:image/png;base64,${imageData}`,
+          avatarBase64: imageData,
+        };
+      }
     }
 
-    const result = await response.json();
+    const errorText = await imagenResponse.text();
+    console.log("Imagen error:", errorText);
 
-    if (result.predictions?.[0]?.bytesBase64Encoded) {
-      const imageData = result.predictions[0].bytesBase64Encoded;
-      const dataUrl = `data:image/png;base64,${imageData}`;
+    // Fallback: Use Gemini 2.0 Flash for image generation
+    console.log("Trying Gemini 2.0 Flash...");
 
-      return {
-        success: true,
-        avatarUrl: dataUrl,
-        avatarBase64: imageData,
-      };
+    const geminiResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: `Look at this person's photo and generate a fun 3D Pixar-style cartoon avatar of them. They should be wearing a Christmas golf outfit (red and green polo, santa hat) and holding a golf club. Make it cute and festive! Keep their key facial features recognizable.`,
+                },
+                {
+                  inlineData: {
+                    mimeType,
+                    data: base64Image,
+                  },
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            responseModalities: ["IMAGE", "TEXT"],
+          },
+        }),
+      }
+    );
+
+    console.log("Gemini response status:", geminiResponse.status);
+
+    if (geminiResponse.ok) {
+      const geminiResult = await geminiResponse.json();
+
+      const parts = geminiResult.candidates?.[0]?.content?.parts || [];
+      for (const part of parts) {
+        if (part.inlineData?.data) {
+          const imageData = part.inlineData.data;
+          const imageMimeType = part.inlineData.mimeType || "image/png";
+          return {
+            success: true,
+            avatarUrl: `data:${imageMimeType};base64,${imageData}`,
+            avatarBase64: imageData,
+          };
+        }
+      }
     }
 
-    throw new Error("No image in response");
-  } catch (error) {
-    console.error("Avatar generation failed:", error);
+    const geminiError = await geminiResponse.text();
+    console.log("Gemini error:", geminiError);
+
     return {
       success: false,
-      error: `Failed to generate avatar: ${error instanceof Error ? error.message : "Unknown error"}`,
+      error: "Both Imagen and Gemini failed to generate image",
+    };
+  } catch (error) {
+    console.error("Avatar generation error:", error);
+    return {
+      success: false,
+      error: `Exception: ${error instanceof Error ? error.message : "Unknown error"}`,
     };
   }
 }
