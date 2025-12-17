@@ -61,6 +61,12 @@ export default function JoinTeam() {
   }, []);
 
   const startCamera = useCallback(async () => {
+    // Check if mediaDevices API is available (requires HTTPS on mobile)
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setError("Camera not available. Please use HTTPS or try uploading a photo instead.");
+      return;
+    }
+
     try {
       // Try to get front-facing camera with ideal settings for selfies
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -89,7 +95,7 @@ export default function JoinTeam() {
         }
         setIsCapturing(true);
       } catch {
-        setError("Could not access camera. Please allow camera permissions.");
+        setError("Could not access camera. Please allow camera permissions or try uploading a photo.");
       }
     }
   }, []);

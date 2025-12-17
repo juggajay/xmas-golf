@@ -28,14 +28,16 @@ export function useGhostAuth() {
 
   // Load user ID from localStorage on mount
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        setStoredUserId(stored as Id<"users">);
-      } catch {
-        // Invalid stored value, clear it
-        localStorage.removeItem(STORAGE_KEY);
+    try {
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          setStoredUserId(stored as Id<"users">);
+        }
       }
+    } catch (err) {
+      // localStorage not available or error
+      console.error("localStorage error:", err);
     }
     setIsLoading(false);
   }, []);
@@ -61,7 +63,13 @@ export function useGhostAuth() {
       const userId = await createUserMutation(data);
 
       // Store in localStorage
-      localStorage.setItem(STORAGE_KEY, userId);
+      try {
+        if (typeof window !== "undefined") {
+          localStorage.setItem(STORAGE_KEY, userId);
+        }
+      } catch (err) {
+        console.error("localStorage setItem error:", err);
+      }
       setStoredUserId(userId);
 
       return userId;
@@ -71,7 +79,13 @@ export function useGhostAuth() {
 
   // Log out (clear localStorage)
   const logout = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    } catch (err) {
+      console.error("localStorage removeItem error:", err);
+    }
     setStoredUserId(null);
   }, []);
 
